@@ -483,14 +483,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard let panel else { return }
 
-        // Position centered on cursor
+        // Position offset from cursor: above → left → right → below
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
             ?? NSScreen.main!
         let vis = screen.visibleFrame
         let (w, h) = (panel.frame.width, panel.frame.height)
-        let x = max(vis.minX + 8, min(vis.maxX - w - 8, mouse.x - w / 2))
-        let y = max(vis.minY + 8, min(vis.maxY - h - 8, mouse.y - h / 2))
+        let gap: CGFloat = 16
+        let margin: CGFloat = 8
+
+        var x: CGFloat
+        var y: CGFloat
+
+        if mouse.y + gap + h <= vis.maxY - margin {
+            // Above cursor, centered horizontally
+            x = mouse.x - w / 2
+            y = mouse.y + gap
+        } else if mouse.x - gap - w >= vis.minX + margin {
+            // Left of cursor, centered vertically
+            x = mouse.x - gap - w
+            y = mouse.y - h / 2
+        } else if mouse.x + gap + w <= vis.maxX - margin {
+            // Right of cursor, centered vertically
+            x = mouse.x + gap
+            y = mouse.y - h / 2
+        } else {
+            // Below cursor (fallback), centered horizontally
+            x = mouse.x - w / 2
+            y = mouse.y - gap - h
+        }
+
+        // Clamp to screen edges
+        x = max(vis.minX + margin, min(vis.maxX - w - margin, x))
+        y = max(vis.minY + margin, min(vis.maxY - h - margin, y))
 
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.alphaValue = 0
