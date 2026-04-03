@@ -21,8 +21,9 @@ The app runs as a menu bar utility (no dock icon). Look for the `⊞` icon in yo
 
 ## Setup
 
-1. **Disable Spotlight's ⌘Space shortcut**
+1. **Free up your hotkey** — the default is ⌘Space, so disable Spotlight's shortcut:
    System Settings → Keyboard → Keyboard Shortcuts → Spotlight → uncheck "Show Spotlight search"
+   (Or [configure a different hotkey](#hotkey) and skip this step.)
 
 2. **Grant Accessibility permissions**
    The app will prompt on first launch. Required to capture the hotkey and copy selected text.
@@ -30,8 +31,8 @@ The app runs as a menu bar utility (no dock icon). Look for the `⊞` icon in yo
 ## Usage
 
 1. Select text in any app (browser, editor, PDF viewer, etc.)
-2. Press **⌘Space** — a reader appears at your cursor
-3. Press **⌘Space** again or **Esc** to dismiss
+2. Press your hotkey (default **⌘Space**) — a reader appears near your cursor
+3. Press the hotkey again or **Esc** to dismiss
 4. Clicking outside the reader also dismisses it
 
 ### Controls
@@ -54,6 +55,7 @@ Settings are stored at `~/.config/rapidread/settings.json` (created on first lau
 {
   "corner_radius" : 16,
   "font_size" : 42,
+  "hotkey" : "command+space",
   "skip_large" : 10,
   "skip_small" : 5,
   "start_delay" : 0.5,
@@ -70,8 +72,32 @@ Settings are stored at `~/.config/rapidread/settings.json` (created on first lau
 | `wpm_step` | How much ↑/↓ adjusts speed |
 | `font_size` | Word display size in points |
 | `start_delay` | Seconds before playback begins (first word shows immediately) |
+| `hotkey` | Global trigger shortcut (see [below](#hotkey)) |
 | `window_width` / `window_height` | Reader panel dimensions |
 | `corner_radius` | Panel corner rounding |
 | `skip_small` / `skip_large` | Words skipped by arrow / ⌥+arrow |
 
 Changes take effect on next launch.
+
+### Hotkey
+
+The `hotkey` setting is a `+`-separated string of modifiers and a key:
+
+```
+modifier+modifier+key
+```
+
+**Modifiers:** `command` (or `cmd`), `shift`, `option` (or `opt`/`alt`), `control` (or `ctrl`)
+
+**Keys:** any letter or number, `space`, `return`, `tab`, `delete`, `escape`, `f1`–`f12`, `left`/`right`/`up`/`down`, common punctuation
+
+Examples:
+
+```json
+"hotkey": "command+space"
+"hotkey": "command+shift+e"
+"hotkey": "option+r"
+"hotkey": "control+shift+f2"
+```
+
+If the value can't be parsed, it falls back to `command+space`.

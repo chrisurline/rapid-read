@@ -13,6 +13,72 @@ enum VK {
     static let up: UInt16 = 126
 }
 
+// MARK: - Hotkey Parsing
+
+struct Hotkey {
+    let keyCode: UInt16
+    let modifiers: NSEvent.ModifierFlags
+    let displayString: String
+
+    static let defaultHotkey = Hotkey(
+        keyCode: VK.space, modifiers: .command, displayString: "⌘Space")
+
+    /// Parse a string like "command+space", "command+shift+e", "option+f2"
+    static func parse(_ str: String) -> Hotkey? {
+        let parts = str.lowercased()
+            .components(separatedBy: "+")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count >= 2 else { return nil }
+
+        // Last part is the key, everything before is modifiers
+        guard let keyName = parts.last, let code = keyCodes[keyName] else { return nil }
+
+        var mods: NSEvent.ModifierFlags = []
+        var symbols: [String] = []
+        for part in parts.dropLast() {
+            switch part {
+            case "command", "cmd":   mods.insert(.command);  symbols.append("⌘")
+            case "shift":            mods.insert(.shift);    symbols.append("⇧")
+            case "option", "opt", "alt": mods.insert(.option); symbols.append("⌥")
+            case "control", "ctrl":  mods.insert(.control);  symbols.append("⌃")
+            default: return nil
+            }
+        }
+        guard !mods.isEmpty else { return nil }
+
+        let keyDisplay = keyDisplayNames[keyName] ?? keyName.capitalized
+        let display = symbols.joined() + keyDisplay
+        return Hotkey(keyCode: code, modifiers: mods, displayString: display)
+    }
+
+    func matches(_ event: NSEvent) -> Bool {
+        let eventMods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            .subtracting(.capsLock)
+        return event.keyCode == keyCode && eventMods == modifiers
+    }
+
+    // Key name → macOS virtual keycode
+    private static let keyCodes: [String: UInt16] = [
+        "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7,
+        "c": 8, "v": 9, "b": 11, "q": 12, "w": 13, "e": 14, "r": 15,
+        "y": 16, "t": 17, "1": 18, "2": 19, "3": 20, "4": 21, "6": 22,
+        "5": 23, "=": 24, "9": 25, "7": 26, "-": 27, "8": 28, "0": 29,
+        "]": 30, "o": 31, "u": 32, "[": 33, "i": 34, "p": 35, "l": 37,
+        "j": 38, "'": 39, "k": 40, ";": 41, "\\": 42, ",": 43, "/": 44,
+        "n": 45, "m": 46, ".": 47, "`": 50,
+        "space": 49, "return": 36, "tab": 48, "delete": 51, "escape": 53,
+        "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97,
+        "f7": 98, "f8": 100, "f9": 101, "f10": 109, "f11": 103, "f12": 111,
+        "left": 123, "right": 124, "down": 125, "up": 126,
+    ]
+
+    // Friendly display names for special keys
+    private static let keyDisplayNames: [String: String] = [
+        "space": "Space", "return": "↩", "tab": "⇥", "delete": "⌫",
+        "escape": "⎋", "left": "←", "right": "→", "up": "↑", "down": "↓",
+    ]
+}
+
 // MARK: - Settings
 
 struct Settings: Codable {
@@ -25,6 +91,7 @@ struct Settings: Codable {
     var cornerRadius: CGFloat = 16
     var skipSmall: Int = 5
     var skipLarge: Int = 10
+    var hotkey: String = "command+space"
 
     init() {}
 
@@ -39,6 +106,11 @@ struct Settings: Codable {
         cornerRadius = try c.decodeIfPresent(CGFloat.self, forKey: .cornerRadius) ?? 16
         skipSmall = try c.decodeIfPresent(Int.self, forKey: .skipSmall) ?? 5
         skipLarge = try c.decodeIfPresent(Int.self, forKey: .skipLarge) ?? 10
+        hotkey = try c.decodeIfPresent(String.self, forKey: .hotkey) ?? "command+space"
+    }
+
+    var parsedHotkey: Hotkey {
+        Hotkey.parse(hotkey) ?? Hotkey.defaultHotkey
     }
 
     // File paths
@@ -397,7 +469,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             accessibilityDescription: "RapidRead"
         )
         let menu = NSMenu()
-        let info = NSMenuItem(title: "RapidRead — ⌘Space", action: nil, keyEquivalent: "")
+        let hk = settings.parsedHotkey.displayString
+        let info = NSMenuItem(title: "RapidRead — \(hk)", action: nil, keyEquivalent: "")
         info.isEnabled = false
         menu.addItem(info)
         menu.addItem(.separator())
@@ -417,24 +490,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHotkey() {
+        let hk = settings.parsedHotkey
         globalMon = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            if self?.isCmdSpace(e) == true {
+            if hk.matches(e) {
                 DispatchQueue.main.async { self?.fire() }
             }
         }
         localMon = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            if self?.isCmdSpace(e) == true {
+            if hk.matches(e) {
                 DispatchQueue.main.async { self?.fire() }
                 return nil // consume
             }
             return e
         }
-    }
-
-    private func isCmdSpace(_ e: NSEvent) -> Bool {
-        let mods = e.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            .subtracting(.capsLock)
-        return e.keyCode == VK.space && mods == .command
     }
 
     // MARK: Hotkey handler
