@@ -2,6 +2,8 @@
 
 A minimal macOS speed reader that uses RSVP (Rapid Serial Visual Presentation). Select text anywhere, press a hotkey, and read it word-by-word in a floating frosted-glass overlay.
 
+![RapidRead demo](assets/demo.gif)
+
 ## Requirements
 
 - macOS 13+
