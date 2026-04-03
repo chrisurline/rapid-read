@@ -4,5 +4,6 @@
 *.xcodeproj/
 xcuserdata/
 samples/
+.samples/
 .claude/
 .vscode/
